@@ -9,17 +9,22 @@ Q4 web app.
 """
 import os
 import re
+import secrets
 import requests
 from datetime import datetime
 from flask import Flask, request, session, redirect, url_for, render_template_string
+from flask_wtf import CSRFProtect
 import mysql.connector
 
 app = Flask(__name__)
-app.secret_key = "prac-test-secret"
+# Never hardcode a real secret key: use one from the environment, or
+# generate a random one at startup if not provided.
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
 
 DB_HOST = os.environ.get("DB_HOST", "mysqldb")
 DB_USER = os.environ.get("DB_USER", "user")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "pass")
+DB_PASSWORD = os.environ["DB_PASSWORD"]
 DB_NAME = os.environ.get("DB_NAME", "testdb")
 
 PASSWORD_LIST_URL = (
@@ -114,6 +119,7 @@ def validate_password(password: str):
 HOME_PAGE = """
 <h2>Login</h2>
 <form method="POST" action="/">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   Username: <input type="text" name="username"><br>
   Password: <input type="password" name="password"><br>
   <button type="submit">Login</button>
@@ -125,6 +131,7 @@ HOME_PAGE = """
 REGISTER_PAGE = """
 <h2>Create Account</h2>
 <form method="POST" action="/register" onsubmit="return checkPassword();">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   Username: <input type="text" name="username" id="username"><br>
   Password: <input type="password" name="password" id="password"><br>
   <button type="submit">Register</button>
@@ -173,7 +180,7 @@ def register():
     return render_template_string(REGISTER_PAGE)
 
 
-@app.route("/welcome")
+@app.route("/welcome", methods=["GET"])
 def welcome():
     if "password" not in session:
         return redirect(url_for("home"))
@@ -182,7 +189,7 @@ def welcome():
     )
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["GET"])
 def logout():
     session.clear()
     return redirect(url_for("home"))
