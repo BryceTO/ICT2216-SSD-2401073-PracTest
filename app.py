@@ -129,16 +129,7 @@ REGISTER_PAGE = """
   Password: <input type="password" name="password" id="password"><br>
   <button type="submit">Register</button>
 </form>
-<script>
-function checkPassword() {
-  var pw = document.getElementById("password").value;
-  if (pw.length < 8 || pw.length > 64) {
-    alert("Password must be between 8 and 64 characters.");
-    return false;
-  }
-  return true; // final authoritative check happens on the backend
-}
-</script>
+<script src="/static/validate.js"></script>
 """
 
 WELCOME_PAGE = """
