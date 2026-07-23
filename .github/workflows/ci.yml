@@ -1,0 +1,101 @@
+name: CI Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "ICT2216-2401073-WebApp"
+          path: "."
+          format: "HTML"
+          out: "dependency-check-report"
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dependency-Check-Report
+          path: dependency-check-report
+
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      mysqldb:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: pass
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: user
+          MYSQL_PASSWORD: pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start Flask app
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: user
+          DB_PASSWORD: pass
+          DB_NAME: testdb
+        run: |
+          nohup python app.py > app.log 2>&1 &
+          sleep 5
+
+      - name: Run integration / UI tests over HTTP
+        run: pytest tests/test_app.py --junitxml=results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: results.xml
+
+      - name: Show app log on failure
+        if: failure()
+        run: cat app.log
+
+  eslint-security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ESLint and plugins
+        run: npm install
+
+      - name: Run ESLint security scan
+        run: |
+          mkdir -p reports
+          npx eslint . --format=@microsoft/eslint-formatter-sarif --output-file=reports/eslint-results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/eslint-results.sarif
