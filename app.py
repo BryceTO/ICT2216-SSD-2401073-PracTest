@@ -24,11 +24,22 @@ DB_NAME = os.environ.get("DB_NAME", "testdb")
 
 PASSWORD_LIST_URL = (
     "https://raw.githubusercontent.com/danielmiessler/SecLists/master/"
-    "Passwords/Common-Credentials/100k-most-used-password-NCSC.txt"
+    "Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt"
 )
 
 MIN_LENGTH = 8
 MAX_LENGTH = 64
+
+# Guaranteed to work even if the NCSC list download fails (no internet /
+# blocked in the container). The full list below is loaded on top of this.
+FALLBACK_COMMON_PASSWORDS = [
+    "password", "password1", "password123", "12345678", "123456789",
+    "1234567890", "123456", "1234567", "12345", "qwerty", "qwerty123",
+    "letmein", "welcome", "monkey", "111111", "000000", "iloveyou",
+    "abc123", "123123", "admin", "administrator", "dragon", "sunshine",
+    "master", "football", "baseball", "shadow", "michael", "superman",
+    "trustno1", "batman", "passw0rd", "starwars", "hello123", "freedom",
+]
 
 
 def get_db():
@@ -55,6 +66,13 @@ def init_db():
     cur.execute("SELECT COUNT(*) FROM common_passwords")
     count = cur.fetchone()[0]
     if count == 0:
+        # Always load the fallback list first so validation works even if
+        # the download below fails.
+        cur.executemany(
+            "INSERT IGNORE INTO common_passwords (pw) VALUES (%s)",
+            [(w,) for w in FALLBACK_COMMON_PASSWORDS],
+        )
+        conn.commit()
         try:
             resp = requests.get(PASSWORD_LIST_URL, timeout=30)
             resp.raise_for_status()
