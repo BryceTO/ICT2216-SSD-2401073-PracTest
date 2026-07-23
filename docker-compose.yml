@@ -26,7 +26,7 @@ services:
     container_name: mysqldb
     restart: always
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: pass
       MYSQL_DATABASE: testdb
@@ -48,3 +48,6 @@ services:
     depends_on:
       - mysqldb
     restart: unless-stopped
+
+volumes:
+  mysql_data:
