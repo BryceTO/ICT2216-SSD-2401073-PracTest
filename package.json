@@ -1,0 +1,10 @@
+{
+  "name": "ict2216-2401073-webapp",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "eslint-plugin-security": "^3.0.1",
+    "@microsoft/eslint-formatter-sarif": "^3.1.0"
+  }
+}
