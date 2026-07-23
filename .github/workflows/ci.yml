@@ -55,6 +55,7 @@ jobs:
           DB_USER: user
           DB_PASSWORD: pass
           DB_NAME: testdb
+          PORT: 8000
         run: |
           nohup python app.py > app.log 2>&1 &
           sleep 5
